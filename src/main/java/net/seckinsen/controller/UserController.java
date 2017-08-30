@@ -1,7 +1,7 @@
 package net.seckinsen.controller;
 
 import net.seckinsen.model.error.LoginError;
-import net.seckinsen.model.request.CredentialDto;
+import net.seckinsen.model.request.CredentialsDto;
 import net.seckinsen.model.response.AuthToken;
 import net.seckinsen.service.UserService;
 import net.seckinsen.util.ErrorUtils;
@@ -36,16 +36,16 @@ public class UserController {
     }
 
     @RequestMapping(method = RequestMethod.POST, path = "/user/login", produces = "application/json; charset=UTF-8")
-    public ResponseEntity userLogin(@RequestBody @Valid CredentialDto credentialDto,
+    public ResponseEntity userLogin(@RequestBody @Valid CredentialsDto credentialsDto,
                                     BindingResult bindingResult) {
 
-        log.info("User login attempt -> Credential ( email : {} - password : {} )", credentialDto.getEmail(), credentialDto.getPassword());
+        log.info("User login attempt -> Credential ( email : {} - password : {} )", credentialsDto.getEmail(), credentialsDto.getPassword());
 
         if (bindingResult.hasErrors()) {
             return new ResponseEntity<>(ErrorUtils.getBindingResultErrors(bindingResult), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        Optional<AuthToken> tokenOptional = userService.login(credentialDto);
+        Optional<AuthToken> tokenOptional = userService.login(credentialsDto);
 
         if (!tokenOptional.isPresent()) {
             return new ResponseEntity<>(new LoginError(), HttpStatus.INTERNAL_SERVER_ERROR);

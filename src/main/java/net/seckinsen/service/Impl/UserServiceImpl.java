@@ -1,8 +1,6 @@
 package net.seckinsen.service.Impl;
 
-import lombok.NoArgsConstructor;
-import net.seckinsen.model.property.CredentialProperty;
-import net.seckinsen.model.request.CredentialDto;
+import net.seckinsen.model.request.CredentialsDto;
 import net.seckinsen.model.response.AuthToken;
 import net.seckinsen.service.UserService;
 import org.slf4j.Logger;
@@ -36,23 +34,20 @@ public class UserServiceImpl implements UserService {
     @Value("${path.login}")
     private String path;
 
-    private CredentialProperty credentialProperty;
-
     @Autowired
-    public UserServiceImpl(RestTemplateBuilder restTemplateBuilder, CredentialProperty credentialProperty) {
+    public UserServiceImpl(RestTemplateBuilder restTemplateBuilder) {
         this.restTemplate = restTemplateBuilder.build();
-        this.credentialProperty = credentialProperty;
     }
 
     @Override
-    public Optional<AuthToken> login(CredentialDto credentialDto) {
+    public Optional<AuthToken> login(CredentialsDto credentialsDto) {
 
         String url = baseUrl + path;
         ResponseEntity<AuthToken> response;
 
         try {
-            log.info("Login service was called -> {} - ( {} - {} )", url, credentialDto.getEmail(), credentialDto.getPassword());
-            response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(credentialDto), AuthToken.class);
+            log.info("Login service was called -> {} - ( {} - {} )", url, credentialsDto.getEmail(), credentialsDto.getPassword());
+            response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(credentialsDto), AuthToken.class);
         } catch (HttpServerErrorException exp) {
             log.error("Api was called wrongly -> status : {} - body : {}", exp.getStatusText(), exp.getResponseBodyAsString());
             return Optional.empty();

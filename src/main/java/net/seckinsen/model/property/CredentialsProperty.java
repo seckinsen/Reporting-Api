@@ -12,8 +12,8 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "credential")
-public class CredentialProperty {
+@ConfigurationProperties(prefix = "credentials")
+public class CredentialsProperty {
 
     private String email;
 

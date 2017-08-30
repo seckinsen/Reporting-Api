@@ -1,6 +1,6 @@
 package net.seckinsen.service;
 
-import net.seckinsen.model.request.CredentialDto;
+import net.seckinsen.model.request.CredentialsDto;
 import net.seckinsen.model.response.AuthToken;
 
 import java.util.Optional;
@@ -11,6 +11,6 @@ import java.util.Optional;
 
 public interface UserService {
 
-    Optional<AuthToken> login(CredentialDto credentialDto);
+    Optional<AuthToken> login(CredentialsDto credentialsDto);
 
 }

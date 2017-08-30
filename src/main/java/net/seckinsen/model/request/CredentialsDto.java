@@ -1,9 +1,6 @@
 package net.seckinsen.model.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.validator.constraints.Email;
 import org.hibernate.validator.constraints.NotBlank;
 
@@ -15,7 +12,8 @@ import org.hibernate.validator.constraints.NotBlank;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class CredentialDto {
+@Builder
+public class CredentialsDto {
 
     @Email
     @NotBlank(message = "Email cannot be blank")
