@@ -1,7 +1,9 @@
 package net.seckinsen.service.Impl;
 
-import net.seckinsen.model.request.CredentialsDto;
+import net.seckinsen.model.request.Credentials;
+import net.seckinsen.model.request.MerchantUserRequest;
 import net.seckinsen.model.response.AuthToken;
+import net.seckinsen.model.response.MerchantUserInfoResponse;
 import net.seckinsen.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,9 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,7 +36,10 @@ public class UserServiceImpl implements UserService {
     private String baseUrl;
 
     @Value("${path.login}")
-    private String path;
+    private String loginPath;
+
+    @Value("${path.merchant.user.info}")
+    private String merchantUserInfoPath;
 
     @Autowired
     public UserServiceImpl(RestTemplateBuilder restTemplateBuilder) {
@@ -40,20 +47,41 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Optional<AuthToken> login(CredentialsDto credentialsDto) {
+    public Optional<AuthToken> login(Credentials credentials) {
 
-        String url = baseUrl + path;
-        ResponseEntity<AuthToken> response;
+        String url = baseUrl + loginPath;
+        ResponseEntity<AuthToken> responseEntity;
 
         try {
-            log.info("Login service was called -> {} - ( {} - {} )", url, credentialsDto.getEmail(), credentialsDto.getPassword());
-            response = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(credentialsDto), AuthToken.class);
+            log.info("Login service was called -> {} - ( {} - {} )", url, credentials.getEmail(), credentials.getPassword());
+            responseEntity = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class);
         } catch (HttpServerErrorException exp) {
             log.error("Api was called wrongly -> status : {} - body : {}", exp.getStatusText(), exp.getResponseBodyAsString());
             return Optional.empty();
         }
 
-        return Optional.of(response.getBody());
+        return Optional.of(responseEntity.getBody());
+
+    }
+
+    @Override
+    public Optional<MerchantUserInfoResponse> getMerchantUserInformation(MerchantUserRequest merchantUserRequest, String authToken) {
+
+        String url = baseUrl + merchantUserInfoPath;
+        ResponseEntity<MerchantUserInfoResponse> responseEntity;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", authToken);
+
+        try {
+            log.info("Get merchant user information service was called -> {} - ( id : {} - token : {})", url, merchantUserRequest.getId(), authToken);
+            responseEntity = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
+        } catch (HttpServerErrorException exp) {
+            log.error("Api was called wrongly -> status : {} - body : {}", exp.getStatusText(), exp.getResponseBodyAsString());
+            return Optional.empty();
+        }
+
+        return Optional.of(responseEntity.getBody());
 
     }
 }

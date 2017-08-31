@@ -13,7 +13,7 @@ import org.hibernate.validator.constraints.NotBlank;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class CredentialsDto {
+public class Credentials {
 
     @Email
     @NotBlank(message = "Email cannot be blank")

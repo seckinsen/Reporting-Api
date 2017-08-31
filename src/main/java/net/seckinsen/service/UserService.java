@@ -1,7 +1,9 @@
 package net.seckinsen.service;
 
-import net.seckinsen.model.request.CredentialsDto;
+import net.seckinsen.model.request.Credentials;
+import net.seckinsen.model.request.MerchantUserRequest;
 import net.seckinsen.model.response.AuthToken;
+import net.seckinsen.model.response.MerchantUserInfoResponse;
 
 import java.util.Optional;
 
@@ -11,6 +13,9 @@ import java.util.Optional;
 
 public interface UserService {
 
-    Optional<AuthToken> login(CredentialsDto credentialsDto);
+    Optional<AuthToken> login(Credentials credentials);
+
+    Optional<MerchantUserInfoResponse> getMerchantUserInformation(MerchantUserRequest merchantUserRequest, String authToken);
+
 
 }
