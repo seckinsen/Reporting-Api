@@ -1,6 +1,9 @@
 package net.seckinsen.controller;
 
-import net.seckinsen.model.error.*;
+import net.seckinsen.model.error.ApiError;
+import net.seckinsen.model.error.AuthorizationError;
+import net.seckinsen.model.error.ErrorResponse;
+import net.seckinsen.model.error.LoginError;
 import net.seckinsen.model.request.Credentials;
 import net.seckinsen.model.request.MerchantUserRequest;
 import net.seckinsen.model.response.AuthToken;
@@ -65,7 +68,7 @@ public class UserController {
         log.info("Merchant user request attempt -> ( User id : {} ) - Authorization ( {} )", merchantUserRequest.getId(), authToken);
 
         if (authToken.isEmpty()) {
-            return new ResponseEntity<>(new ErrorResponse(Stream.of(new AuthorizationError()).collect(Collectors.toList())), HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(new ErrorResponse(Stream.of(new AuthorizationError("Token Missed!")).collect(Collectors.toList())), HttpStatus.UNAUTHORIZED);
         }
 
         if (bindingResult.hasErrors()) {
@@ -80,7 +83,6 @@ public class UserController {
             }
 
             return new ResponseEntity<>(merchantInfoResponseOptional.get(), HttpStatus.OK);
-
         } catch (HttpClientErrorException exp) {
             log.error("Api was called wrongly -> status : {} - message : {}", exp.getStatusText(), exp.getMessage());
             return new ResponseEntity<>(new ErrorResponse(Stream.of(new AuthorizationError("Token Expired!")).collect(Collectors.toList())), HttpStatus.UNAUTHORIZED);

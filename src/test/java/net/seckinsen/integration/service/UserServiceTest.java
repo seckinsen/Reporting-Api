@@ -36,7 +36,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 @RunWith(SpringRunner.class)
 @RestClientTest(UserServiceImpl.class)
-public class UserServiceTest extends BaseTestCase {
+public class UserServiceTest {
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
