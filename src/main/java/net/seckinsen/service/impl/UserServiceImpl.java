@@ -1,4 +1,4 @@
-package net.seckinsen.service.Impl;
+package net.seckinsen.service.impl;
 
 import net.seckinsen.model.request.Credentials;
 import net.seckinsen.model.request.MerchantUserRequest;

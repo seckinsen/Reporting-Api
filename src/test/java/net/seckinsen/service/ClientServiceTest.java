@@ -3,7 +3,7 @@ package net.seckinsen.service;
 import net.seckinsen.model.request.ClientRequest;
 import net.seckinsen.model.response.ClientResponse;
 import net.seckinsen.model.response.CustomerInfo;
-import net.seckinsen.service.Impl.ClientServiceImpl;
+import net.seckinsen.service.impl.ClientServiceImpl;
 import net.seckinsen.util.BaseTestCase;
 import net.seckinsen.util.TestUtils;
 import org.junit.Before;

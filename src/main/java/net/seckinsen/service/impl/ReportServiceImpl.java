@@ -1,4 +1,4 @@
-package net.seckinsen.service.Impl;
+package net.seckinsen.service.impl;
 
 import net.seckinsen.model.request.RefundsReportRequest;
 import net.seckinsen.model.response.RefundReportResponse;

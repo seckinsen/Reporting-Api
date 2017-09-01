@@ -3,7 +3,7 @@ package net.seckinsen.service;
 import net.seckinsen.model.request.RefundsReportRequest;
 import net.seckinsen.model.response.RefundReport;
 import net.seckinsen.model.response.RefundReportResponse;
-import net.seckinsen.service.Impl.ReportServiceImpl;
+import net.seckinsen.service.impl.ReportServiceImpl;
 import net.seckinsen.util.TestUtils;
 import org.junit.Before;
 import org.junit.Rule;

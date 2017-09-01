@@ -5,7 +5,7 @@ import net.seckinsen.model.request.MerchantUserRequest;
 import net.seckinsen.model.response.AuthToken;
 import net.seckinsen.model.response.MerchantUser;
 import net.seckinsen.model.response.MerchantUserInfoResponse;
-import net.seckinsen.service.Impl.UserServiceImpl;
+import net.seckinsen.service.impl.UserServiceImpl;
 import net.seckinsen.util.BaseTestCase;
 import net.seckinsen.util.TestUtils;
 import org.junit.Before;
