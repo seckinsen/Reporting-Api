@@ -4,6 +4,7 @@ buildscript {
 	}
 	repositories {
 		mavenCentral()
+		jcenter()
 	}
 	dependencies {
 		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
@@ -17,12 +18,20 @@ apply plugin: 'org.springframework.boot'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = 1.8
 
+ext{
+	swaggerVersion = "2.7.0"
+	swaggerUiVersion = "2.7.0"
+}
+
 repositories {
 	mavenCentral()
+	jcenter()
 }
 
 dependencies {
 	compile('org.springframework.boot:spring-boot-starter-web')
+	compile("io.springfox:springfox-swagger2:$swaggerVersion")
+	compile("io.springfox:springfox-swagger-ui:$swaggerUiVersion")
 	compileOnly('org.projectlombok:lombok:1.16.18')
 	testCompile('org.springframework.boot:spring-boot-starter-test')
 }
