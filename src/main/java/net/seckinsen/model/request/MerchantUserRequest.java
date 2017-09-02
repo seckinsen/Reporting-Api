@@ -1,8 +1,7 @@
 package net.seckinsen.model.request;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.*;
 
 import javax.validation.constraints.NotNull;
 
@@ -12,7 +11,10 @@ import javax.validation.constraints.NotNull;
 
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MerchantUserRequest {
 
     @NotNull(message = "Merchant user identifier cannot be null")

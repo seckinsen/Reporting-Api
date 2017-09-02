@@ -17,5 +17,4 @@ public interface UserService {
 
     Optional<MerchantUserInfoResponse> getMerchantUserInformation(MerchantUserRequest merchantUserRequest, String authToken);
 
-
 }

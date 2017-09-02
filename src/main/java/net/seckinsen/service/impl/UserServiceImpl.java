@@ -1,22 +1,21 @@
 package net.seckinsen.service.impl;
 
+import net.seckinsen.configuration.properties.UserServiceProperties;
 import net.seckinsen.model.request.Credentials;
 import net.seckinsen.model.request.MerchantUserRequest;
 import net.seckinsen.model.response.AuthToken;
 import net.seckinsen.model.response.MerchantUserInfoResponse;
 import net.seckinsen.service.UserService;
+import net.seckinsen.util.HttpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -26,61 +25,43 @@ import java.util.Optional;
 @Service
 public class UserServiceImpl implements UserService {
 
-    private Logger log = LoggerFactory.getLogger(getClass());
+    private final Logger log = LoggerFactory.getLogger(getClass());
 
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
-    @Value("${baseUrl}")
-    private String baseUrl;
+    private final String loginUrl;
 
-    @Value("${path.login}")
-    private String loginPath;
-
-    @Value("${path.merchant.user.info}")
-    private String merchantUserInfoPath;
+    private final String infoUrl;
 
     @Autowired
-    public UserServiceImpl(RestTemplate restTemplate) {
+    public UserServiceImpl(RestTemplate restTemplate, UserServiceProperties properties) {
         this.restTemplate = restTemplate;
+        Objects.requireNonNull(properties.getLogin().getUrl(), "Login cannot be null");
+        loginUrl = properties.getLogin().getUrl();
+        Objects.requireNonNull(properties.getInfo().getUrl(), "Path cannot be null");
+        infoUrl = properties.getInfo().getUrl();
     }
 
 
     @Override
     public Optional<AuthToken> login(Credentials credentials) {
 
-        String url = baseUrl + loginPath;
-        ResponseEntity<AuthToken> responseEntity;
+        log.info("Login service was called -> {} - ( {} - {} )", loginUrl, credentials.getEmail(), credentials.getPassword());
 
-        try {
-            log.info("Login service was called -> {} - ( {} - {} )", url, credentials.getEmail(), credentials.getPassword());
-            responseEntity = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class);
-        } catch (HttpServerErrorException exp) {
-            log.error("Api was called wrongly -> status : {} - body : {}", exp.getStatusText(), exp.getResponseBodyAsString());
-            return Optional.empty();
-        }
+        AuthToken authToken = restTemplate.exchange(loginUrl, HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class).getBody();
 
-        return Optional.of(responseEntity.getBody());
+        return Optional.of(authToken);
 
     }
 
     @Override
     public Optional<MerchantUserInfoResponse> getMerchantUserInformation(MerchantUserRequest merchantUserRequest, String authToken) {
 
-        String url = baseUrl + merchantUserInfoPath;
-        ResponseEntity<MerchantUserInfoResponse> responseEntity;
+        log.info("Getting merchant user information service was called -> {} - ( id : {} - token : {})", infoUrl, merchantUserRequest.getId(), authToken);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", authToken);
+        MerchantUserInfoResponse merchantUserInfoResponse = restTemplate.exchange(infoUrl, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, HttpUtils.generateAuthorizationHeader(authToken)), MerchantUserInfoResponse.class).getBody();
 
-        try {
-            log.info("Get merchant user information service was called -> {} - ( id : {} - token : {})", url, merchantUserRequest.getId(), authToken);
-            responseEntity = restTemplate.exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
-        } catch (HttpServerErrorException exp) {
-            log.error("Api was called wrongly -> status : {} - body : {}", exp.getStatusText(), exp.getResponseBodyAsString());
-            return Optional.empty();
-        }
-
-        return Optional.of(responseEntity.getBody());
+        return Optional.of(merchantUserInfoResponse);
 
     }
 

@@ -1,5 +1,6 @@
 package net.seckinsen.model.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 import org.hibernate.validator.constraints.Email;
 import org.hibernate.validator.constraints.NotBlank;
@@ -13,6 +14,7 @@ import org.hibernate.validator.constraints.NotBlank;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Credentials {
 
     @Email

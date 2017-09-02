@@ -1,5 +1,7 @@
 package net.seckinsen.service;
 
+import net.seckinsen.configuration.properties.ClientServiceProperties;
+import net.seckinsen.exception.NullCustomerInfoException;
 import net.seckinsen.model.request.ClientRequest;
 import net.seckinsen.model.response.ClientResponse;
 import net.seckinsen.model.response.CustomerInfo;
@@ -13,7 +15,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.client.HttpClientErrorException;
@@ -41,22 +42,16 @@ public class ClientServiceTest extends BaseTestCase {
 
     private ClientService clientService;
 
-    @Value("${baseUrl}")
-    private String baseUrl;
-
-    @Value("${path.client}")
-    private String clientPath;
-
-    private final String url = baseUrl + clientPath;
+    private final ClientServiceProperties properties = new ClientServiceProperties("https://sandbox-reporting.rpdpymnt.com/api/v3/client");
 
     @Before
     public void setUp() {
-        clientService = new ClientServiceImpl(restTemplateMock);
+        clientService = new ClientServiceImpl(restTemplateMock, properties);
     }
 
 
     @Test
-    public void getClientInformationWithValidTransactionIdAndTokenShouldReturnClientResponse() throws Exception {
+    public void getClientInformationWithValidTransactionIdAndAuthorizationTokenShouldReturnClientResponse() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
         final String transactionId = "982786-1503662147-3";
@@ -82,40 +77,40 @@ public class ClientServiceTest extends BaseTestCase {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
                 .thenReturn(new ResponseEntity<>(clientResponse, HttpStatus.OK));
 
-        Optional<ClientResponse> clientResponseOptional = clientService.getClientInformation(clientRequest, authToken);
+        Optional<ClientResponse> optional = clientService.getClientInformation(clientRequest, authToken);
 
         // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
-        assertTrue("Fault [expected true]", clientResponseOptional.isPresent());
-        assertEquals("Fault [expected 'Customer Info Id' equals]",
+        verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
+        assertTrue("Fault [expected true]", optional.isPresent());
+        assertEquals("Fault [expected 'Customer Path Id' equals]",
                 customerInfo.getId(),
-                clientResponseOptional.get().getCustomerInfo().getId());
-        assertEquals("Fault [expected 'Customer Info Email' equals]",
+                optional.get().getCustomerInfo().getId());
+        assertEquals("Fault [expected 'Customer Path Email' equals]",
                 customerInfo.getEmail(),
-                clientResponseOptional.get().getCustomerInfo().getEmail());
-        assertEquals("Fault [expected 'Customer Info Billing City' equals]",
+                optional.get().getCustomerInfo().getEmail());
+        assertEquals("Fault [expected 'Customer Path Billing City' equals]",
                 customerInfo.getBillingCity(),
-                clientResponseOptional.get().getCustomerInfo().getBillingCity());
+                optional.get().getCustomerInfo().getBillingCity());
     }
 
     @Test
-    public void getClientInformationWithValidTransactionIdAndInvalidTokenShouldThrowException() throws Exception {
+    public void getClientInformationWithInvalidAuthorizationTokenShouldThrowUnauthorizedException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
         final String transactionId = "982786-1503662147-3";
         final String expectedExceptionMessage = "401 UNAUTHORIZED";
 
+        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
+
         ClientRequest clientRequest = ClientRequest.builder()
                 .transactionId(transactionId)
                 .build();
 
-        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
-
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
                 .thenThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED));
         expectedException.expect(HttpClientErrorException.class);
         expectedException.expectMessage(expectedExceptionMessage);
@@ -125,7 +120,7 @@ public class ClientServiceTest extends BaseTestCase {
             fail("HttpClientErrorException must be thrown");
         } catch (Exception exp) {
             // THEN
-            verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
+            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
             assertThat("Fault [expected 'Exception Message' asserts]",
                     exp.getMessage(),
                     is(expectedExceptionMessage));
@@ -134,56 +129,43 @@ public class ClientServiceTest extends BaseTestCase {
     }
 
     @Test
-    public void getClientInformationWithInvalidTransactionIdAndValidTokenShouldReturnEmptyOptionalInstance() throws Exception {
+    public void getClientInformationWithInvalidTransactionIdAndValidAuthorizationTokenShouldThrowInternalServerErrorException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
         final String transactionId = "1-1-1";
+        final String expectedExceptionMessage = "500 INTERNAL_SERVER_ERROR";
+
+        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
 
         ClientRequest clientRequest = ClientRequest.builder()
                 .transactionId(transactionId)
                 .build();
 
-        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
-
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
                 .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+        expectedException.expect(HttpServerErrorException.class);
+        expectedException.expectMessage(expectedExceptionMessage);
 
-        Optional<ClientResponse> clientResponseOptional = clientService.getClientInformation(clientRequest, authToken);
-
-        // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
-        assertFalse("Fault [expected false]", clientResponseOptional.isPresent());
+        try {
+            clientService.getClientInformation(clientRequest, authToken);
+            fail("HttpServerErrorException must be thrown");
+        } catch (Exception exp) {
+            // THEN
+            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
+            assertThat("Fault [expected 'Exception Message' asserts]",
+                    exp.getMessage(),
+                    is(expectedExceptionMessage));
+            throw exp;
+        }
     }
 
     @Test
-    public void getClientInformationWithNotReadableTransactionIdAndValidTokenShouldReturnEmptyOptionalInstance() throws Exception {
+    public void getClientInformationWithVoidTransactionIdAndValidAuthorizationTokenShouldThrowNullCustomerInfoException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String transactionId = "1";
-
-        ClientRequest clientRequest = ClientRequest.builder()
-                .transactionId(transactionId)
-                .build();
-
-        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
-
-        // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
-                .thenThrow(new HttpMessageNotReadableException("Not Readable Transaction Id"));
-
-        Optional<ClientResponse> clientResponseOptional = clientService.getClientInformation(clientRequest, authToken);
-
-        // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
-        assertFalse("Fault [expected false]", clientResponseOptional.isPresent());
-    }
-
-    @Test
-    public void getClientInformationWithValidTransactionIdAndTokenWithNullCustomerInfoShouldReturnEmptyOptionalInstance() throws Exception {
-        // GIVEN
-        final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String transactionId = "982786-1503662147-3";
+        final String transactionId = "1-1444392550-1";
+        final String expectedExceptionMessage = "Customer Information cannot be null";
 
         HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
 
@@ -196,14 +178,54 @@ public class ClientServiceTest extends BaseTestCase {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
                 .thenReturn(new ResponseEntity<>(clientResponse, HttpStatus.OK));
+        expectedException.expect(NullCustomerInfoException.class);
+        expectedException.expectMessage(expectedExceptionMessage);
 
-        Optional<ClientResponse> clientResponseOptional = clientService.getClientInformation(clientRequest, authToken);
+        try {
+            clientService.getClientInformation(clientRequest, authToken);
+            fail("NullCustomerInfoException must be thrown");
+        } catch (Exception exp) {
+            // THEN
+            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
+            assertThat("Fault [expected 'Exception Message' asserts]",
+                    exp.getMessage(),
+                    is(expectedExceptionMessage));
+            throw exp;
+        }
+    }
 
-        // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
-        assertFalse("Fault [expected false]", clientResponseOptional.isPresent());
+    @Test
+    public void getClientInformationWithNotReadableHttpMessageShouldThrowHttpMessageNotReadableException() throws Exception {
+        // GIVEN
+        final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
+        final String transactionId = "1";
+        final String expectedExceptionMessage = "Not Readable Http Message";
+
+        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
+
+        ClientRequest clientRequest = ClientRequest.builder()
+                .transactionId(transactionId)
+                .build();
+
+        // WHEN
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
+                .thenThrow(new HttpMessageNotReadableException(expectedExceptionMessage));
+        expectedException.expect(HttpMessageNotReadableException.class);
+        expectedException.expectMessage(expectedExceptionMessage);
+
+        try {
+            clientService.getClientInformation(clientRequest, authToken);
+            fail("HttpMessageNotReadableException must be thrown");
+        } catch (Exception exp) {
+            // THEN
+            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
+            assertThat("Fault [expected 'Exception Message' asserts]",
+                    exp.getMessage(),
+                    is(expectedExceptionMessage));
+            throw exp;
+        }
     }
 
 }

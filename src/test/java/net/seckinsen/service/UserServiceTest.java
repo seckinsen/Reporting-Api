@@ -1,5 +1,7 @@
 package net.seckinsen.service;
 
+import net.seckinsen.configuration.properties.Path;
+import net.seckinsen.configuration.properties.UserServiceProperties;
 import net.seckinsen.model.request.Credentials;
 import net.seckinsen.model.request.MerchantUserRequest;
 import net.seckinsen.model.response.AuthToken;
@@ -15,7 +17,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -42,54 +43,48 @@ public class UserServiceTest extends BaseTestCase {
 
     private UserService userService;
 
-    @Value("${baseUrl}")
-    private String baseUrl;
-
-    @Value("${path.login}")
-    private String loginPath;
-
-    @Value("${path.merchant.user.info}")
-    private String merchantUserInfoPath;
+    private UserServiceProperties properties = new UserServiceProperties(new Path("https://sandbox-reporting.rpdpymnt.com/api/v3/merchant/user/login"), new Path("https://sandbox-reporting.rpdpymnt.com/api/v3/merchant/user/show"));
 
     @Before
     public void setUp() {
-        userService = new UserServiceImpl(restTemplateMock);
+        userService = new UserServiceImpl(restTemplateMock, properties);
     }
 
 
     @Test
-    public void loginWithValidCredentialsShouldReturnToken() throws Exception {
+    public void loginWithValidCredentialsShouldReturnAuthorizationToken() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String url = baseUrl + loginPath;
-        final String email = "demo@bumin.com.tr";
-        final String password = "cjaiU8CV";
+        final String email = "demo@demo.com";
+        final String password = "lkj123asd";
 
         Credentials credentials = Credentials.builder()
                 .email(email)
                 .password(password)
                 .build();
 
-        AuthToken token = new AuthToken(authToken);
+        AuthToken token = AuthToken.builder()
+                .token(authToken)
+                .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class))
+        when(restTemplateMock.exchange(properties.getLogin().getUrl(), HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class))
                 .thenReturn(new ResponseEntity<>(token, HttpStatus.OK));
 
-        Optional<AuthToken> tokenOptional = userService.login(credentials);
+        Optional<AuthToken> optional = userService.login(credentials);
 
         // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class);
-        assertTrue("Fault [expected true]", tokenOptional.isPresent());
-        assertEquals("Fault [expected 'AuthToken' equals]", token.getToken(), tokenOptional.get().getToken());
+        verify(restTemplateMock, times(1)).exchange(properties.getLogin().getUrl(), HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class);
+        assertTrue("Fault [expected true]", optional.isPresent());
+        assertEquals("Fault [expected 'Authorization Token' equals]", token.getToken(), optional.get().getToken());
     }
 
     @Test
-    public void loginWithInvalidCredentialsShouldReturnEmptyOptionalInstance() throws Exception {
+    public void loginWithInvalidCredentialsShouldThrowInternalServerErrorException() throws Exception {
         // GIVEN
-        final String url = baseUrl + loginPath;
-        final String email = "demo@bumin.com.tr";
-        final String password = "cjaiU8CV";
+        final String email = "demo@demo.com";
+        final String password = "lkj123asd";
+        final String expectedExceptionMessage = "500 INTERNAL_SERVER_ERROR";
 
         Credentials credentials = Credentials.builder()
                 .email(email)
@@ -97,26 +92,33 @@ public class UserServiceTest extends BaseTestCase {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class))
+        when(restTemplateMock.exchange(properties.getLogin().getUrl(), HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class))
                 .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+        expectedException.expect(HttpServerErrorException.class);
+        expectedException.expectMessage(expectedExceptionMessage);
 
-        Optional<AuthToken> tokenOptional = userService.login(credentials);
-
-        // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class);
-        assertFalse("Fault [expected false]", tokenOptional.isPresent());
+        try {
+            userService.login(credentials);
+            fail("HttpServerErrorException must be thrown");
+        } catch (Exception exp) {
+            // THEN
+            verify(restTemplateMock, times(1)).exchange(properties.getLogin().getUrl(), HttpMethod.POST, new HttpEntity<>(credentials), AuthToken.class);
+            assertThat("Fault [expected 'Exception Message' asserts]",
+                    exp.getMessage(),
+                    is(expectedExceptionMessage));
+            throw exp;
+        }
     }
 
     @Test
-    public void getMerchantInformationWithValidMerchantUserIdentifierAndTokenShouldReturnMerchantUserInformation() throws Exception {
+    public void getMerchantUserInformationWithValidMerchantUserIdentifierAndAuthorizationTokenShouldReturnMerchantUserInformation() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String url = baseUrl + merchantUserInfoPath;
 
         HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
 
         MerchantUserRequest merchantUserRequest = MerchantUserRequest.builder()
-                .id(1)
+                .id(53)
                 .build();
 
         MerchantUser merchantUser = MerchantUser.builder()
@@ -134,30 +136,29 @@ public class UserServiceTest extends BaseTestCase {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class))
+        when(restTemplateMock.exchange(properties.getInfo().getUrl(), HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class))
                 .thenReturn(new ResponseEntity<>(merchantUserInfoResponse, HttpStatus.OK));
 
-        Optional<MerchantUserInfoResponse> merchantUserInfoResponseOptional = userService.getMerchantUserInformation(merchantUserRequest, authToken);
+        Optional<MerchantUserInfoResponse> optional = userService.getMerchantUserInformation(merchantUserRequest, authToken);
 
         // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
-        assertTrue("Fault [expected true]", merchantUserInfoResponseOptional.isPresent());
+        verify(restTemplateMock, times(1)).exchange(properties.getInfo().getUrl(), HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
+        assertTrue("Fault [expected true]", optional.isPresent());
         assertEquals("Fault [expected 'Status' equals]",
                 merchantUserInfoResponse.getStatus(),
-                merchantUserInfoResponseOptional.get().getStatus());
+                optional.get().getStatus());
         assertEquals("Fault [expected 'Merchant User Name' equals]",
                 merchantUserInfoResponse.getMerchantUser().getName(),
-                merchantUserInfoResponseOptional.get().getMerchantUser().getName());
+                optional.get().getMerchantUser().getName());
         assertEquals("Fault [expected 'Merchant User Id' equals]",
                 merchantUserInfoResponse.getMerchantUser().getId(),
-                merchantUserInfoResponseOptional.get().getMerchantUser().getId());
+                optional.get().getMerchantUser().getId());
     }
 
     @Test
-    public void getMerchantUserInformationWithInvalidTokenShouldThrowException() throws Exception {
+    public void getMerchantUserInformationWithInvalidTokenShouldThrowUnauthorizedException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String url = baseUrl + merchantUserInfoPath;
         final String expectedExceptionMessage = "401 UNAUTHORIZED";
 
         HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
@@ -167,7 +168,7 @@ public class UserServiceTest extends BaseTestCase {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class))
+        when(restTemplateMock.exchange(properties.getInfo().getUrl(), HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class))
                 .thenThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED));
         expectedException.expect(HttpClientErrorException.class);
         expectedException.expectMessage(expectedExceptionMessage);
@@ -177,7 +178,7 @@ public class UserServiceTest extends BaseTestCase {
             fail("HttpClientErrorException must be thrown");
         } catch (Exception exp) {
             // THEN
-            verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
+            verify(restTemplateMock, times(1)).exchange(properties.getInfo().getUrl(), HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
             assertThat("Fault [expected 'Exception Message' asserts]",
                     exp.getMessage(),
                     is(expectedExceptionMessage));
@@ -186,10 +187,10 @@ public class UserServiceTest extends BaseTestCase {
     }
 
     @Test
-    public void getMerchantInformationWithInvalidMerchantUserIdentifierShouldReturnEmptyOptionalInstance() throws Exception {
+    public void getMerchantUserInformationWithInvalidMerchantUserIdentifierAndValidAuthorizationTokenShouldThrowInternalServerErrorException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String url = baseUrl + merchantUserInfoPath;
+        final String expectedExceptionMessage = "500 INTERNAL_SERVER_ERROR";
 
         HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
 
@@ -198,14 +199,22 @@ public class UserServiceTest extends BaseTestCase {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class))
+        when(restTemplateMock.exchange(properties.getInfo().getUrl(), HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class))
                 .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+        expectedException.expect(HttpServerErrorException.class);
+        expectedException.expectMessage(expectedExceptionMessage);
 
-        Optional<MerchantUserInfoResponse> merchantUserInfoResponseOptional = userService.getMerchantUserInformation(merchantUserRequest, authToken);
-
-        // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
-        assertFalse("Fault [expected false]", merchantUserInfoResponseOptional.isPresent());
+        try {
+            userService.getMerchantUserInformation(merchantUserRequest, authToken);
+            fail("HttpServerErrorException must be thrown");
+        } catch (Exception exp) {
+            // THEN
+            verify(restTemplateMock, times(1)).exchange(properties.getInfo().getUrl(), HttpMethod.POST, new HttpEntity<>(merchantUserRequest, headers), MerchantUserInfoResponse.class);
+            assertThat("Fault [expected 'Exception Message' asserts]",
+                    exp.getMessage(),
+                    is(expectedExceptionMessage));
+            throw exp;
+        }
     }
 
 }

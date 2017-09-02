@@ -1,5 +1,6 @@
 package net.seckinsen.service;
 
+import net.seckinsen.configuration.properties.ReportServiceProperties;
 import net.seckinsen.model.request.RefundsReportRequest;
 import net.seckinsen.model.response.RefundReport;
 import net.seckinsen.model.response.RefundReportResponse;
@@ -12,7 +13,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.client.HttpClientErrorException;
@@ -42,21 +42,15 @@ public class ReportServiceTest {
 
     private ReportService reportService;
 
-    @Value("${baseUrl}")
-    private String baseUrl;
-
-    @Value("${path.report.refunds}")
-    private String refundsReportPath;
-
-    private final String url = baseUrl + refundsReportPath;
+    private final ReportServiceProperties properties = new ReportServiceProperties("https://sandbox-reporting.rpdpymnt.com/api/v3/refunds/report");
 
     @Before
     public void setUp() {
-        reportService = new ReportServiceImpl(restTemplateMock);
+        reportService = new ReportServiceImpl(restTemplateMock, properties);
     }
 
     @Test
-    public void getRefundsReportWithValidRefundsReportRequestAndTokenShouldReturnRefundsReportResponse() throws Exception {
+    public void getRefundsReportWithValidRefundsReportRequestAndAuthorizationTokenShouldReturnRefundsReportResponse() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
 
@@ -87,30 +81,30 @@ public class ReportServiceTest {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
                 .thenReturn(new ResponseEntity<>(refundReportResponse, HttpStatus.OK));
 
-        Optional<RefundReportResponse> refundReportResponseOptional = reportService.getRefundsReport(refundsReportRequest, authToken);
+        Optional<RefundReportResponse> optional = reportService.getRefundsReport(refundsReportRequest, authToken);
 
         // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
-        assertTrue("Fault [expected true]", refundReportResponseOptional.isPresent());
+        verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
+        assertTrue("Fault [expected true]", optional.isPresent());
         assertEquals("Fault [expected 'Status' equals]",
                 "APPROVED",
-                refundReportResponseOptional.get().getStatus());
+                optional.get().getStatus());
         assertEquals("Fault [expected 'Refunds Report Size' equals]",
                 2,
-                refundReportResponseOptional.get().getRefundReports().size());
+                optional.get().getRefundReports().size());
         assertEquals("Fault [expected 'First Refunds Report Currency Type' equals]",
                 "USD",
-                refundReportResponseOptional.get().getRefundReports().get(0).getCurrency());
+                optional.get().getRefundReports().get(0).getCurrency());
         assertEquals("Fault [expected 'Second Refunds Report Total Amount' equals]",
                 Long.valueOf(110),
-                refundReportResponseOptional.get().getRefundReports().get(1).getTotal());
+                optional.get().getRefundReports().get(1).getTotal());
     }
 
     @Test
-    public void getRefundsReportWithValidRefundsReportRequestAndInvalidTokenShouldThrowException() throws Exception {
+    public void getRefundsReportWithInvalidAuthorizationTokenShouldThrowUnauthorizedException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
         final String expectedExceptionMessage = "401 UNAUTHORIZED";
@@ -125,7 +119,7 @@ public class ReportServiceTest {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
                 .thenThrow(new HttpClientErrorException(HttpStatus.UNAUTHORIZED));
         expectedException.expect(HttpClientErrorException.class);
         expectedException.expectMessage(expectedExceptionMessage);
@@ -135,7 +129,7 @@ public class ReportServiceTest {
             fail("HttpClientErrorException must be thrown");
         } catch (Exception exp) {
             // THEN
-            verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
+            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
             assertThat("Fault [expected 'Exception Message' asserts]",
                     exp.getMessage(),
                     is(expectedExceptionMessage));
@@ -144,9 +138,10 @@ public class ReportServiceTest {
     }
 
     @Test
-    public void getRefundsReportWithInvalidRefundsReportRequestAndValidTokenShouldReturnEmptyOptionalInstance() throws Exception {
+    public void getRefundsReportWithInvalidRefundsReportRequestAndValidAuthorizationTokenShouldThrowInternalServerErrorException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
+        final String expectedExceptionMessage = "500 INTERNAL_SERVER_ERROR";
 
         HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
 
@@ -158,21 +153,29 @@ public class ReportServiceTest {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
                 .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
+        expectedException.expect(HttpServerErrorException.class);
+        expectedException.expectMessage(expectedExceptionMessage);
 
-
-        Optional<RefundReportResponse> refundReportResponseOptional = reportService.getRefundsReport(refundsReportRequest, authToken);
-
-        // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
-        assertFalse("Fault [expected false]", refundReportResponseOptional.isPresent());
+        try {
+            reportService.getRefundsReport(refundsReportRequest, authToken);
+            fail("HttpServerErrorException must be thrown");
+        } catch (Exception exp) {
+            // THEN
+            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
+            assertThat("Fault [expected 'Exception Message' asserts]",
+                    exp.getMessage(),
+                    is(expectedExceptionMessage));
+            throw exp;
+        }
     }
 
     @Test
-    public void getRefundsReportWithNotReadableRefundsReportRequestAndValidTokenShouldReturnEmptyOptionalInstance() throws Exception {
+    public void getRefundsReportWithNotReadableHttpMessageShouldThrowHttpMessageNotReadableException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
+        final String expectedExceptionMessage = "Not Readable Http Message";
 
         HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
 
@@ -184,15 +187,22 @@ public class ReportServiceTest {
                 .build();
 
         // WHEN
-        when(restTemplateMock.exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
-                .thenThrow(new HttpMessageNotReadableException("Not Readable Refunds Report Request"));
+        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
+                .thenThrow(new HttpMessageNotReadableException(expectedExceptionMessage));
+        expectedException.expect(HttpMessageNotReadableException.class);
+        expectedException.expectMessage(expectedExceptionMessage);
 
-
-        Optional<RefundReportResponse> refundReportResponseOptional = reportService.getRefundsReport(refundsReportRequest, authToken);
-
-        // THEN
-        verify(restTemplateMock, times(1)).exchange(url, HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
-        assertFalse("Fault [expected false]", refundReportResponseOptional.isPresent());
+        try {
+            reportService.getRefundsReport(refundsReportRequest, authToken);
+            fail("HttpMessageNotReadableException must be thrown");
+        } catch (Exception exp) {
+            // THEN
+            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
+            assertThat("Fault [expected 'Exception Message' asserts]",
+                    exp.getMessage(),
+                    is(expectedExceptionMessage));
+            throw exp;
+        }
     }
 
 }

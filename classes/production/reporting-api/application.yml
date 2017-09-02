@@ -1,0 +1,17 @@
+baseUrl: https://sandbox-reporting.rpdpymnt.com/api/v3
+
+merchant-user:
+    login:
+        url: "${baseUrl}/merchant/user/login"
+    info:
+        url: "${baseUrl}/merchant/user/show"
+
+client:
+    url: "${baseUrl}/client"
+
+path.login: /merchant/user/login
+path.merchant.user.info: /merchant/user/show
+path.client: /client
+path.report.refunds: /refunds/report
+credentials.email: demo@bumin.com.tr
+credentials.password: cjaiU8CV

@@ -1,8 +1,7 @@
 package net.seckinsen.model.request;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.*;
 import org.hibernate.validator.constraints.NotBlank;
 
 /**
@@ -11,7 +10,10 @@ import org.hibernate.validator.constraints.NotBlank;
 
 @Getter
 @Setter
+@AllArgsConstructor
+@NoArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ClientRequest {
 
     @NotBlank(message = "Transaction Id cannot be blank")

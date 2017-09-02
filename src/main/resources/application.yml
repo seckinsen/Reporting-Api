@@ -1,0 +1,10 @@
+baseUrl: "https://sandbox-reporting.rpdpymnt.com/api/v3"
+merchant-user:
+    login:
+        url: "${baseUrl}/merchant/user/login"
+    info:
+        url: "${baseUrl}/merchant/user/show"
+client:
+    url: "${baseUrl}/client"
+report-refunds:
+    url: "${baseUrl}/refunds/report"

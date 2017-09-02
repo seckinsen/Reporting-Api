@@ -1,5 +1,6 @@
 package net.seckinsen.service;
 
+import net.seckinsen.exception.NullCustomerInfoException;
 import net.seckinsen.model.request.ClientRequest;
 import net.seckinsen.model.response.ClientResponse;
 
@@ -11,6 +12,6 @@ import java.util.Optional;
 
 public interface ClientService {
 
-    Optional<ClientResponse> getClientInformation(ClientRequest clientRequest, String authToken);
+    Optional<ClientResponse> getClientInformation(ClientRequest clientRequest, String authToken) throws NullCustomerInfoException;
 
 }
