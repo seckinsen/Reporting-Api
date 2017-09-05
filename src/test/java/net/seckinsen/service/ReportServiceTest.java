@@ -5,6 +5,7 @@ import net.seckinsen.model.request.RefundsReportRequest;
 import net.seckinsen.model.response.RefundReport;
 import net.seckinsen.model.response.RefundReportResponse;
 import net.seckinsen.service.impl.ReportServiceImpl;
+import net.seckinsen.util.BaseTestCase;
 import net.seckinsen.util.TestUtils;
 import org.junit.Before;
 import org.junit.Rule;
@@ -14,7 +15,6 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.http.*;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.*;
  */
 
 @RunWith(MockitoJUnitRunner.class)
-public class ReportServiceTest {
+public class ReportServiceTest extends BaseTestCase {
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -161,40 +161,6 @@ public class ReportServiceTest {
         try {
             reportService.getRefundsReport(refundsReportRequest, authToken);
             fail("HttpServerErrorException must be thrown");
-        } catch (Exception exp) {
-            // THEN
-            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);
-            assertThat("Fault [expected 'Exception Message' asserts]",
-                    exp.getMessage(),
-                    is(expectedExceptionMessage));
-            throw exp;
-        }
-    }
-
-    @Test
-    public void getRefundsReportWithNotReadableHttpMessageShouldThrowHttpMessageNotReadableException() throws Exception {
-        // GIVEN
-        final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String expectedExceptionMessage = "Not Readable Http Message";
-
-        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
-
-        RefundsReportRequest refundsReportRequest = RefundsReportRequest.builder()
-                .fromDate(Calendar.getInstance().getTime())
-                .toDate(Calendar.getInstance().getTime())
-                .merchant(2)
-                .acquirer(5)
-                .build();
-
-        // WHEN
-        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class))
-                .thenThrow(new HttpMessageNotReadableException(expectedExceptionMessage));
-        expectedException.expect(HttpMessageNotReadableException.class);
-        expectedException.expectMessage(expectedExceptionMessage);
-
-        try {
-            reportService.getRefundsReport(refundsReportRequest, authToken);
-            fail("HttpMessageNotReadableException must be thrown");
         } catch (Exception exp) {
             // THEN
             verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(refundsReportRequest, headers), RefundReportResponse.class);

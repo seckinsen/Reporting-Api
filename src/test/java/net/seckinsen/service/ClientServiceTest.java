@@ -129,39 +129,7 @@ public class ClientServiceTest extends BaseTestCase {
     }
 
     @Test
-    public void getClientInformationWithInvalidTransactionIdAndValidAuthorizationTokenShouldThrowInternalServerErrorException() throws Exception {
-        // GIVEN
-        final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
-        final String transactionId = "1-1-1";
-        final String expectedExceptionMessage = "500 INTERNAL_SERVER_ERROR";
-
-        HttpHeaders headers = TestUtils.generateAuthorizationHeader(authToken);
-
-        ClientRequest clientRequest = ClientRequest.builder()
-                .transactionId(transactionId)
-                .build();
-
-        // WHEN
-        when(restTemplateMock.exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class))
-                .thenThrow(new HttpServerErrorException(HttpStatus.INTERNAL_SERVER_ERROR));
-        expectedException.expect(HttpServerErrorException.class);
-        expectedException.expectMessage(expectedExceptionMessage);
-
-        try {
-            clientService.getClientInformation(clientRequest, authToken);
-            fail("HttpServerErrorException must be thrown");
-        } catch (Exception exp) {
-            // THEN
-            verify(restTemplateMock, times(1)).exchange(properties.getUrl(), HttpMethod.POST, new HttpEntity<>(clientRequest, headers), ClientResponse.class);
-            assertThat("Fault [expected 'Exception Message' asserts]",
-                    exp.getMessage(),
-                    is(expectedExceptionMessage));
-            throw exp;
-        }
-    }
-
-    @Test
-    public void getClientInformationWithVoidTransactionIdAndValidAuthorizationTokenShouldThrowNullCustomerInfoException() throws Exception {
+    public void getClientInformationWithInvalidTransactionIdAndValidAuthorizationTokenShouldThrowNullCustomerInfoException() throws Exception {
         // GIVEN
         final String authToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJtZXJjaGFudFVzZXJJZCI6NTMsInJvbGUiOiJhZG1pbiIsIm1lcmNoYW50SWQiOjMsInN1Yk1lcmNoYW50SWRzIjpbMyw3NCw5MywxMTkxLDExMSwxMzcsMTM4LDE0MiwxNDUsMTQ2LDE1MywzMzQsMTc1LDE4NCwyMjAsMjIxLDIyMiwyMjMsMjk0LDMyMiwzMjMsMzI3LDMyOSwzMzAsMzQ5LDM5MCwzOTEsNDU1LDQ1Niw0NzksNDg4LDU2MywxMTQ5LDU3MCwxMTM4LDExNTYsMTE1NywxMTU4LDExNzldLCJ0aW1lc3RhbXAiOjE1MDQxMDg3NzN9.Jt5JVXoEEkck4M9fbmDOaykhMpoq-x-D40rY-7Hv_fQ";
         final String transactionId = "1-1444392550-1";
